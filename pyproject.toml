@@ -8,7 +8,7 @@ version = "0.1.1"
 description = "Invariant Causal Prediction (ICP) for Python: causal predictor discovery via invariance across environments with confidence intervals and R-parity tests."
 readme = "README.md"
 authors = [{ name = "Simon Zimmermann", email = "simon.zimmermann@arc-intelligence.de" }]
-license = { file = "LICENSE" }
+license = "GPL-2.0-or-later"
 requires-python = ">=3.9"
 dependencies = [
   "numpy>=1.23",
@@ -17,6 +17,7 @@ dependencies = [
   "pandas>=1.5",
   "statsmodels>=0.14",
   "matplotlib>=3.7",
+  "joblib>=1.2",
 ]
 keywords = [
   "causal-inference",
@@ -46,7 +47,30 @@ Issues = "https://github.com/simzim96/invariant_causal_prediction/issues"
 
 [tool.setuptools]
 package-dir = {"" = "."}
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["invariant_causal_prediction*"] 
+include = ["invariant_causal_prediction*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "UP", "B"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.9"
+warn_unused_configs = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_incomplete_stub = true
+strict_optional = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+pretty = true 
