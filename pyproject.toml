@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "invariant-causal-prediction"
-version = "0.1.0"
-description = "Invariant Causal Prediction (ICP) for Python: identify invariant causal predictors across environments and compute confidence intervals."
+version = "0.1.1"
+description = "Invariant Causal Prediction (ICP) for Python: causal predictor discovery via invariance across environments with confidence intervals and R-parity tests."
 readme = "README.md"
-authors = [{ name = "Your Name" }]
-license = { text = "MIT" }
+authors = [{ name = "Simon Zimmermann", email = "simon.zimmermann@arc-intelligence.de" }]
+license = { file = "LICENSE" }
 requires-python = ">=3.9"
 dependencies = [
   "numpy>=1.23",
@@ -18,9 +18,31 @@ dependencies = [
   "statsmodels>=0.14",
   "matplotlib>=3.7",
 ]
+keywords = [
+  "causal-inference",
+  "invariant-causal-prediction",
+  "icp",
+  "statistics",
+  "machine-learning",
+  "robustness",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
 
 [project.urls]
-Homepage = "https://example.com/invariant-causal-prediction"
+Homepage = "https://github.com/simzim96/invariant_causal_prediction"
+Repository = "https://github.com/simzim96/invariant_causal_prediction"
+Issues = "https://github.com/simzim96/invariant_causal_prediction/issues"
 
 [tool.setuptools]
 package-dir = {"" = "."}
