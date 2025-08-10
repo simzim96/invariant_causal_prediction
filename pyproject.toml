@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "invariant-causal-prediction"
-version = "0.1.1"
+version = "0.1.2"
 description = "Invariant Causal Prediction (ICP) for Python: causal predictor discovery via invariance across environments with confidence intervals and R-parity tests."
 readme = "README.md"
 authors = [{ name = "Simon Zimmermann", email = "simon.zimmermann@arc-intelligence.de" }]
