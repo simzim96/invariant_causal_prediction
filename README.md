@@ -3,6 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/invariant-causal-prediction.svg)](https://pypi.org/project/invariant-causal-prediction/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/invariant-causal-prediction.svg)](https://pypi.org/project/invariant-causal-prediction/)
 [![CI](https://github.com/simzim96/invariant_causal_prediction/actions/workflows/test.yml/badge.svg)](https://github.com/simzim96/invariant_causal_prediction/actions/workflows/test.yml)
+[![Docs](https://readthedocs.org/projects/invariant-causal-prediction/badge/?version=latest)](https://invariant-causal-prediction.readthedocs.io/en/latest/)
 [![License: GPL v2+](https://img.shields.io/badge/License-GPL%20v2%2B-blue.svg)](./LICENSE)
 
 Invariant Causal Prediction (ICP) in Python. Identify causal predictors that are invariant across environments, with confidence intervals and parity tests against the original R implementation.
