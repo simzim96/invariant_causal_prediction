@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List
+
 import numpy as np
 
 
@@ -14,7 +15,9 @@ def summarize_icp(result: Dict[str, Any], feature_names: List[str] | None = None
     model_reject = result.get("model_reject", False)
 
     lines: List[str] = []
-    lines.append(f"Factor target: {result.get('factor', False)}, environments: {result.get('noEnv', 'NA')}")
+    lines.append(
+        f"Factor target: {result.get('factor', False)}, environments: {result.get('noEnv', 'NA')}"
+    )
     lines.append(f"Model rejected: {model_reject}")
     lines.append(f"Used variables: {used}")
     lines.append("Confidence intervals and maximin coefficients:")
@@ -23,4 +26,4 @@ def summarize_icp(result: Dict[str, Any], feature_names: List[str] | None = None
         mm = maximin[j] if maximin is not None and j < len(maximin) else np.nan
         lines.append(f"  {name}: [{ci[0]:.4g}, {ci[1]:.4g}], maximin={mm:.4g}")
     lines.append(f"Accepted sets ({len(accepted)}): {accepted}")
-    return "\n".join(lines) 
+    return "\n".join(lines)

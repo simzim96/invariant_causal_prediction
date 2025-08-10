@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List, Sequence
-import numpy as np
+from collections.abc import Sequence
+from typing import Any, Dict, List
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 
-def plot_conf_intervals(result: Dict[str, Any], feature_names: List[str] | None = None, ax: plt.Axes | None = None):
+def plot_conf_intervals(
+    result: Dict[str, Any], feature_names: List[str] | None = None, ax: plt.Axes | None = None
+):
     conf_int = result.get("conf_int")
     if conf_int is None:
         raise ValueError("result['conf_int'] is None")
@@ -28,7 +32,9 @@ def plot_conf_intervals(result: Dict[str, Any], feature_names: List[str] | None 
     return ax
 
 
-def plot_accepted_sets(result: Dict[str, Any], feature_names: List[str] | None = None, ax: plt.Axes | None = None):
+def plot_accepted_sets(
+    result: Dict[str, Any], feature_names: List[str] | None = None, ax: plt.Axes | None = None
+):
     sets: List[Sequence[int]] = result.get("accepted_sets", [])
     if ax is None:
         _, ax = plt.subplots(figsize=(6, max(3, len(sets) * 0.3)))
@@ -44,9 +50,9 @@ def plot_accepted_sets(result: Dict[str, Any], feature_names: List[str] | None =
                 mat[i, j] = 1
     ax.imshow(mat, aspect="auto", cmap="Blues")
     ax.set_yticks(range(len(sets)))
-    ax.set_yticklabels(["{" + ",".join(str(j+1) for j in s) + "}" for s in sets])
+    ax.set_yticklabels(["{" + ",".join(str(j + 1) for j in s) + "}" for s in sets])
     ax.set_xticks(range(p))
     ax.set_xticklabels(names, rotation=45, ha="right")
     ax.set_title("Accepted Sets")
     plt.tight_layout()
-    return ax 
+    return ax

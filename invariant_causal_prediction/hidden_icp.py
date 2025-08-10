@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .icp import _prepare_inputs, _glm_residuals, _invariance_pvalue, TestName, TestCallable
+from .icp import TestCallable, TestName, _glm_residuals, _invariance_pvalue, _prepare_inputs
 
 
 @dataclass
@@ -30,11 +30,18 @@ class HiddenICP:
         accepted: List[Tuple[int, ...]] = []
         best_p = 0.0
         from itertools import combinations
+
         for k in range(0, min(self.max_set_size, p) + 1):
             for subset in combinations(range(p), k):
                 resid = _glm_residuals(X, y, subset, is_factor=is_factor)
                 pval = _invariance_pvalue(
-                    resid, envs, self.test, X=X, cols=subset, max_no_obs=self.max_no_obs, random_state=self.random_state
+                    resid,
+                    envs,
+                    self.test,
+                    X=X,
+                    cols=subset,
+                    max_no_obs=self.max_no_obs,
+                    random_state=self.random_state,
                 )
                 best_p = max(best_p, pval)
                 if pval >= self.alpha:
@@ -64,4 +71,4 @@ def hidden_icp(
         max_set_size=max_set_size,
         max_no_obs=max_no_obs,
         random_state=random_state,
-    ).fit(X, y, exp_ind) 
+    ).fit(X, y, exp_ind)

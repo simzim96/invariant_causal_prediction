@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from itertools import combinations
-from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from numpy.typing import ArrayLike
 from scipy import stats
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 from sklearn.linear_model import LassoCV, LogisticRegressionCV
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
-import statsmodels.api as sm
-
+from sklearn.preprocessing import StandardScaler
 
 TestName = Literal["normal", "ks", "ranks", "correlation", "exact"]
 SelectionName = Literal["all", "lasso", "stability", "boosting"]
@@ -27,7 +27,6 @@ def _prepare_inputs(
 ) -> Tuple[np.ndarray, np.ndarray, List[np.ndarray], bool]:
     X = np.asarray(X)
     y_arr = np.asarray(y)
-    n = len(y_arr)
     if X.ndim != 2:
         raise ValueError("X must be 2D array-like")
     if y_arr.ndim != 1 or len(y_arr) != X.shape[0]:
@@ -117,12 +116,15 @@ def _pairwise_groups(values: List[np.ndarray]) -> List[Tuple[np.ndarray, np.ndar
     return pairs
 
 
-def _exact_permutation_pvalue(groups: List[np.ndarray], n_perm: int = 1000, random_state: int = 0) -> float:
+def _exact_permutation_pvalue(
+    groups: List[np.ndarray], n_perm: int = 1000, random_state: int = 0
+) -> float:
     rng = np.random.default_rng(random_state)
+
     # test statistic: sum of absolute mean differences across all pairs
-    pairs = _pairwise_groups(groups)
     def stat_of(groups_local: List[np.ndarray]) -> float:
         return float(sum(abs(g1.mean() - g2.mean()) for g1, g2 in _pairwise_groups(groups_local)))
+
     obs = stat_of(groups)
     # pool and permute group labels
     pooled = np.concatenate(groups)
@@ -133,7 +135,7 @@ def _exact_permutation_pvalue(groups: List[np.ndarray], n_perm: int = 1000, rand
         idx = 0
         perm_groups = []
         for s in sizes:
-            perm_groups.append(pooled[idx: idx + s])
+            perm_groups.append(pooled[idx : idx + s])
             idx += s
         if stat_of(perm_groups) >= obs - 1e-12:
             count += 1
@@ -166,7 +168,10 @@ def _invariance_pvalue(
         pvals = [stats.ks_2samp(g1, g2).pvalue for g1, g2 in _pairwise_groups(groups)]
         return _fisher_combine(pvals)
     elif name == "ranks":
-        pvals = [stats.mannwhitneyu(g1, g2, alternative="two-sided").pvalue for g1, g2 in _pairwise_groups(groups)]
+        pvals = [
+            stats.mannwhitneyu(g1, g2, alternative="two-sided").pvalue
+            for g1, g2 in _pairwise_groups(groups)
+        ]
         return _fisher_combine(pvals)
     elif name == "correlation":
         if X is None or cols is None:
@@ -224,7 +229,10 @@ class ICP:
         if self.selection == "all":
             idx = list(range(p))
         elif self.selection == "lasso":
-            model = make_pipeline(StandardScaler(with_mean=True, with_std=True), LassoCV(cv=5, random_state=self.random_state))
+            model = make_pipeline(
+                StandardScaler(with_mean=True, with_std=True),
+                LassoCV(cv=5, random_state=self.random_state),
+            )
             model.fit(X, y)
             lasso: LassoCV = model.named_steps["lassocv"]
             coef = lasso.coef_
@@ -247,7 +255,10 @@ class ICP:
             rng = np.random.default_rng(self.random_state)
             for _ in range(B):
                 ix = rng.choice(X.shape[0], size=int(0.8 * X.shape[0]), replace=True)
-                model = make_pipeline(StandardScaler(with_mean=True, with_std=True), LassoCV(cv=3, random_state=self.random_state))
+                model = make_pipeline(
+                    StandardScaler(with_mean=True, with_std=True),
+                    LassoCV(cv=3, random_state=self.random_state),
+                )
                 model.fit(X[ix], y[ix])
                 coef = model.named_steps["lassocv"].coef_
                 freq += (np.abs(coef) > 1e-12).astype(float)
@@ -275,7 +286,13 @@ class ICP:
             for subset in combinations(candidates, k):
                 resid = _glm_residuals(X, y, subset, is_factor=is_factor)
                 pval = _invariance_pvalue(
-                    resid, envs, self.test, X=X, cols=subset, max_no_obs=self.max_no_obs, random_state=self.random_state
+                    resid,
+                    envs,
+                    self.test,
+                    X=X,
+                    cols=subset,
+                    max_no_obs=self.max_no_obs,
+                    random_state=self.random_state,
                 )
                 best_p = max(best_p, pval)
                 if pval >= self.alpha:
@@ -290,7 +307,12 @@ class ICP:
         return accepted, best_p
 
     def _conf_intervals(
-        self, X: np.ndarray, y: np.ndarray, accepted_sets: List[Tuple[int, ...]], p: int, is_factor: bool
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        accepted_sets: List[Tuple[int, ...]],
+        p: int,
+        is_factor: bool,
     ) -> Tuple[np.ndarray, np.ndarray, Dict[int, List[float]]]:
         coef_lists: Dict[int, List[float]] = {j: [] for j in range(p)}
         for subset in accepted_sets:
@@ -332,7 +354,13 @@ class ICP:
             for subset in accepted_sets:
                 resid = _glm_residuals(X, y, subset, is_factor=is_factor)
                 pval = _invariance_pvalue(
-                    resid, envs, self.test, X=X, cols=subset, max_no_obs=self.max_no_obs, random_state=self.random_state
+                    resid,
+                    envs,
+                    self.test,
+                    X=X,
+                    cols=subset,
+                    max_no_obs=self.max_no_obs,
+                    random_state=self.random_state,
                 )
                 if pval >= self.gof:
                     has_good = True
@@ -341,7 +369,9 @@ class ICP:
         if len(accepted_sets) == 0:
             model_reject = True
 
-        conf_int, maximin, coef_lists = self._conf_intervals(X, y, accepted_sets, p, is_factor=is_factor)
+        conf_int, maximin, coef_lists = self._conf_intervals(
+            X, y, accepted_sets, p, is_factor=is_factor
+        )
         # simple per-variable p-values from OLS/Logit full model
         try:
             if not is_factor:
@@ -398,6 +428,3 @@ def icp(
         max_no_obs=max_no_obs,
         random_state=random_state,
     ).fit(X, y, exp_ind)
-
-
-from .hidden_icp import hidden_icp 

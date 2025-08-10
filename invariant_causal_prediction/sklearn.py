@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
-import numpy as np
+
 from numpy.typing import ArrayLike
 
 from .icp import ICP
@@ -38,12 +38,12 @@ class ICPRegressor:
     def get_params(self, deep: bool = True) -> Dict[str, Any]:
         return self.__dict__.copy()
 
-    def set_params(self, **params: Any) -> "ICPRegressor":
+    def set_params(self, **params: Any) -> ICPRegressor:
         for k, v in params.items():
             setattr(self, k, v)
         return self
 
-    def fit(self, X: ArrayLike, y: ArrayLike, exp_ind: ArrayLike) -> "ICPRegressor":
+    def fit(self, X: ArrayLike, y: ArrayLike, exp_ind: ArrayLike) -> ICPRegressor:
         self._result = ICP(
             alpha=self.alpha,
             test=self.test,
@@ -67,4 +67,4 @@ class ICPRegressor:
 
 
 class ICPClassifier(ICPRegressor):
-    pass 
+    pass

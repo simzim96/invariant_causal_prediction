@@ -1,9 +1,9 @@
-import os
-import sys
-import math
 import json
-import tempfile
+import math
+import os
 import subprocess
+import tempfile
+
 import numpy as np
 import pytest
 
@@ -16,6 +16,7 @@ try:
     import rpy2.robjects as ro
     from rpy2.robjects import numpy2ri
     from rpy2.robjects.packages import importr
+
     numpy2ri.activate()
     _HAVE_RPY2 = True
     try:
@@ -29,6 +30,7 @@ except Exception:
 
 # Fallback: use Rscript
 
+
 def _run_rscript_file(script_text: str) -> subprocess.CompletedProcess:
     with tempfile.NamedTemporaryFile(mode="w", suffix=".R", delete=False) as f:
         f.write(script_text)
@@ -41,7 +43,9 @@ def _run_rscript_file(script_text: str) -> subprocess.CompletedProcess:
         except Exception:
             pass
 
+
 # Determine if we can run Rscript+package
+
 
 def _have_rscript_icp() -> bool:
     try:
@@ -53,16 +57,27 @@ def _have_rscript_icp() -> bool:
     except Exception:
         return False
 
+
 _HAVE_RSCRIPT = _have_rscript_icp()
 
 # Skip only if neither interface is available
-pytestmark = pytest.mark.skipif(not (_HAVE_RPY2 and _HAVE_R_ICP) and not _HAVE_RSCRIPT, reason="Requires R with InvariantCausalPrediction via rpy2 or Rscript")
+pytestmark = pytest.mark.skipif(
+    not (_HAVE_RPY2 and _HAVE_R_ICP) and not _HAVE_RSCRIPT,
+    reason="Requires R with InvariantCausalPrediction via rpy2 or Rscript",
+)
 
 
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 
 def _format_r_args(alpha: float, test: str, selection: str, extra: Optional[Dict] = None) -> str:
-    args = [f"alpha={alpha}", f"test='{test}'", f"selection='{selection}'", "showCompletion=FALSE", "showAcceptedSets=FALSE"]
+    args = [
+        f"alpha={alpha}",
+        f"test='{test}'",
+        f"selection='{selection}'",
+        "showCompletion=FALSE",
+        "showAcceptedSets=FALSE",
+    ]
     if extra:
         if "gof" in extra and extra["gof"] is not None:
             args.append(f"gof={float(extra['gof'])}")
@@ -71,7 +86,15 @@ def _format_r_args(alpha: float, test: str, selection: str, extra: Optional[Dict
     return ", ".join(args)
 
 
-def run_r_icp_rpy2(X: np.ndarray, y: np.ndarray, exp_ind: np.ndarray, alpha: float, test: str, selection: str, extra: Optional[Dict] = None):
+def run_r_icp_rpy2(
+    X: np.ndarray,
+    y: np.ndarray,
+    exp_ind: np.ndarray,
+    alpha: float,
+    test: str,
+    selection: str,
+    extra: Optional[Dict] = None,
+):
     r = ro.r
     r_X = ro.r.matrix(X, nrow=X.shape[0], ncol=X.shape[1])
     r_Y = ro.FloatVector(y.astype(float))
@@ -81,7 +104,16 @@ def run_r_icp_rpy2(X: np.ndarray, y: np.ndarray, exp_ind: np.ndarray, alpha: flo
     r_ExpInd = ro.IntVector([code_map[v] for v in exp_codes])
 
     # rpy2 call with extra args not implemented due to earlier ABI issues; fallback expected
-    res = r["ICP"](r_X, r_Y, r_ExpInd, alpha=alpha, test=test, selection=selection, showCompletion=False, showAcceptedSets=False)
+    res = r["ICP"](
+        r_X,
+        r_Y,
+        r_ExpInd,
+        alpha=alpha,
+        test=test,
+        selection=selection,
+        showCompletion=False,
+        showAcceptedSets=False,
+    )
     r_list = dict(zip(res.names, list(res)))
     acc_sets = []
     if "acceptedSets" in r_list and len(r_list["acceptedSets"]) > 0:
@@ -111,7 +143,15 @@ def run_r_icp_rpy2(X: np.ndarray, y: np.ndarray, exp_ind: np.ndarray, alpha: flo
     }
 
 
-def run_r_icp_rscript(X: np.ndarray, y: np.ndarray, exp_ind: np.ndarray, alpha: float, test: str, selection: str, extra: Optional[Dict] = None):
+def run_r_icp_rscript(
+    X: np.ndarray,
+    y: np.ndarray,
+    exp_ind: np.ndarray,
+    alpha: float,
+    test: str,
+    selection: str,
+    extra: Optional[Dict] = None,
+):
     with tempfile.TemporaryDirectory() as td:
         x_path = os.path.join(td, "X.csv")
         y_path = os.path.join(td, "y.csv")
@@ -156,13 +196,23 @@ def run_r_icp_rscript(X: np.ndarray, y: np.ndarray, exp_ind: np.ndarray, alpha: 
             "model_reject": bool(data.get("model_reject", False)),
             "factor": bool(data.get("factor", False)),
             "no_env": int(data.get("no_env", 0)) if data.get("no_env") is not None else None,
-            "conf_int": np.array(data.get("conf_int")) if data.get("conf_int") is not None else None,
+            "conf_int": (
+                np.array(data.get("conf_int")) if data.get("conf_int") is not None else None
+            ),
             "used_variables": data.get("used_variables"),
             "best_model": float(data.get("best_model", float("nan"))),
         }
 
 
-def run_r_icp(X: np.ndarray, y: np.ndarray, exp_ind: np.ndarray, alpha: float, test: str, selection: str, extra: Optional[Dict] = None):
+def run_r_icp(
+    X: np.ndarray,
+    y: np.ndarray,
+    exp_ind: np.ndarray,
+    alpha: float,
+    test: str,
+    selection: str,
+    extra: Optional[Dict] = None,
+):
     if _HAVE_RPY2 and _HAVE_R_ICP:
         return run_r_icp_rpy2(X, y, exp_ind, alpha, test, selection, extra=extra)
     elif _HAVE_RSCRIPT:
@@ -175,13 +225,15 @@ def to_set_of_frozensets(sets_list):
     return {frozenset(s) for s in sets_list}
 
 
-@pytest.mark.parametrize("test_name", ["normal", "ks", "ranks", "correlation"])  # exact is slow; add separately
+@pytest.mark.parametrize(
+    "test_name", ["normal", "ks", "ranks", "correlation"]
+)  # exact is slow; add separately
 @pytest.mark.parametrize("selection", ["all", "lasso"])  # add stability/boosting in separate test
 def test_regression_parity_basic(test_name, selection):
     rng = np.random.default_rng(123)
     n, p = 400, 5
     X = rng.standard_normal((n, p))
-    exp_ind = np.r_[np.zeros(n//2, dtype=int), np.ones(n - n//2, dtype=int)]
+    exp_ind = np.r_[np.zeros(n // 2, dtype=int), np.ones(n - n // 2, dtype=int)]
     X[exp_ind == 1] *= rng.normal(1.5, 0.3, size=(p,))
     beta = np.array([1.0, 1.0] + [0.0] * (p - 2))
     y = X @ beta + rng.standard_normal(n)
@@ -197,21 +249,35 @@ def test_regression_parity_basic(test_name, selection):
     assert py_res["factor"] is False
 
     # Compare accepted sets
-    r_sets = to_set_of_frozensets(r_res["accepted_sets"]) if r_res["accepted_sets"] is not None else set()
-    py_sets = to_set_of_frozensets(py_res["accepted_sets"]) if py_res["accepted_sets"] is not None else set()
+    r_sets = (
+        to_set_of_frozensets(r_res["accepted_sets"])
+        if r_res["accepted_sets"] is not None
+        else set()
+    )
+    py_sets = (
+        to_set_of_frozensets(py_res["accepted_sets"])
+        if py_res["accepted_sets"] is not None
+        else set()
+    )
 
     if r_sets != py_sets:
-        print(f"[DIFF] accepted_sets differ (test={test_name}, selection={selection}):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}")
+        print(
+            f"[DIFF] accepted_sets differ (test={test_name}, selection={selection}):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}"
+        )
 
     # Model reject flag
     if bool(r_res["model_reject"]) != bool(py_res["model_reject"]):
-        print(f"[DIFF] model_reject differs (R={r_res['model_reject']}, PY={py_res['model_reject']})")
+        print(
+            f"[DIFF] model_reject differs (R={r_res['model_reject']}, PY={py_res['model_reject']})"
+        )
 
     # CI zero-coverage parity: which variables exclude zero?
     if r_res["conf_int"] is not None:
         r_signif = [not (low <= 0.0 <= up) for (low, up) in r_res["conf_int"]]
         py_ci = py_res["conf_int"]
-        py_signif = [not (math.isnan(low) or math.isnan(up) or (low <= 0.0 <= up)) for (low, up) in py_ci]
+        py_signif = [
+            not (math.isnan(low) or math.isnan(up) or (low <= 0.0 <= up)) for (low, up) in py_ci
+        ]
         if r_signif != py_signif:
             print(f"[DIFF] significance mask differs: R={r_signif}, PY={py_signif}")
 
@@ -222,7 +288,7 @@ def test_regression_parity_selection_variants(test_name, selection):
     rng = np.random.default_rng(321)
     n, p = 400, 6
     X = rng.standard_normal((n, p))
-    exp_ind = np.r_[np.zeros(n//2, dtype=int), np.ones(n - n//2, dtype=int)]
+    exp_ind = np.r_[np.zeros(n // 2, dtype=int), np.ones(n - n // 2, dtype=int)]
     X[exp_ind == 1] *= 1.3
     beta = np.array([1.0, 0.7, 0.0, 0.0, 0.0, 0.0])
     y = X @ beta + rng.standard_normal(n)
@@ -231,23 +297,33 @@ def test_regression_parity_selection_variants(test_name, selection):
     r_res = run_r_icp(X, y, exp_ind, alpha=alpha, test=test_name, selection=selection)
     py_res = icp(X, y, exp_ind, alpha=alpha, test=test_name, selection=selection, max_set_size=2)
 
-    r_sets = to_set_of_frozensets(r_res["accepted_sets"]) if r_res["accepted_sets"] is not None else set()
-    py_sets = to_set_of_frozensets(py_res["accepted_sets"]) if py_res["accepted_sets"] is not None else set()
+    r_sets = (
+        to_set_of_frozensets(r_res["accepted_sets"])
+        if r_res["accepted_sets"] is not None
+        else set()
+    )
+    py_sets = (
+        to_set_of_frozensets(py_res["accepted_sets"])
+        if py_res["accepted_sets"] is not None
+        else set()
+    )
     if r_sets != py_sets:
-        print(f"[DIFF] accepted_sets differ (selection={selection}):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}")
+        print(
+            f"[DIFF] accepted_sets differ (selection={selection}):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}"
+        )
 
 
 @pytest.mark.parametrize("test_name", ["ks", "ranks"])  # tests for classification
-@pytest.mark.parametrize("selection", ["all", "lasso"]) 
+@pytest.mark.parametrize("selection", ["all", "lasso"])
 def test_classification_parity_basic(test_name, selection):
     rng = np.random.default_rng(111)
     n, p = 500, 4
     X = rng.standard_normal((n, p))
-    exp_ind = np.r_[np.zeros(n//2, dtype=int), np.ones(n - n//2, dtype=int)]
+    exp_ind = np.r_[np.zeros(n // 2, dtype=int), np.ones(n - n // 2, dtype=int)]
     X[exp_ind == 1] *= 1.25
     w = np.array([0.8, 0.6, 0.0, 0.0])
     logits = X @ w
-    prob = 1/(1 + np.exp(-logits))
+    prob = 1 / (1 + np.exp(-logits))
     y = (rng.random(n) < prob).astype(int)
 
     alpha = 0.05
@@ -257,10 +333,20 @@ def test_classification_parity_basic(test_name, selection):
     assert r_res["factor"] is True
     assert py_res["factor"] is True
 
-    r_sets = to_set_of_frozensets(r_res["accepted_sets"]) if r_res["accepted_sets"] is not None else set()
-    py_sets = to_set_of_frozensets(py_res["accepted_sets"]) if py_res["accepted_sets"] is not None else set()
+    r_sets = (
+        to_set_of_frozensets(r_res["accepted_sets"])
+        if r_res["accepted_sets"] is not None
+        else set()
+    )
+    py_sets = (
+        to_set_of_frozensets(py_res["accepted_sets"])
+        if py_res["accepted_sets"] is not None
+        else set()
+    )
     if r_sets != py_sets:
-        print(f"[DIFF] accepted_sets differ (classification, test={test_name}):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}")
+        print(
+            f"[DIFF] accepted_sets differ (classification, test={test_name}):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}"
+        )
 
 
 @pytest.mark.parametrize("max_no_obs", [200])
@@ -268,7 +354,7 @@ def test_exact_test_parity(max_no_obs):
     rng = np.random.default_rng(42)
     n, p = 400, 4
     X = rng.standard_normal((n, p))
-    exp_ind = np.r_[np.zeros(n//2, dtype=int), np.ones(n - n//2, dtype=int)]
+    exp_ind = np.r_[np.zeros(n // 2, dtype=int), np.ones(n - n // 2, dtype=int)]
     X[exp_ind == 1] *= 1.2
     beta = np.array([0.9, 0.0, 0.0, 0.0])
     y = X @ beta + rng.standard_normal(n)
@@ -277,10 +363,20 @@ def test_exact_test_parity(max_no_obs):
     r_res = run_r_icp(X, y, exp_ind, alpha=alpha, test="exact", selection="all")
     py_res = icp(X, y, exp_ind, alpha=alpha, test="exact", selection="all", max_no_obs=max_no_obs)
 
-    r_sets = to_set_of_frozensets(r_res["accepted_sets"]) if r_res["accepted_sets"] is not None else set()
-    py_sets = to_set_of_frozensets(py_res["accepted_sets"]) if py_res["accepted_sets"] is not None else set()
+    r_sets = (
+        to_set_of_frozensets(r_res["accepted_sets"])
+        if r_res["accepted_sets"] is not None
+        else set()
+    )
+    py_sets = (
+        to_set_of_frozensets(py_res["accepted_sets"])
+        if py_res["accepted_sets"] is not None
+        else set()
+    )
     if r_sets != py_sets:
-        print(f"[DIFF] accepted_sets differ (exact):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}")
+        print(
+            f"[DIFF] accepted_sets differ (exact):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}"
+        )
 
 
 def test_three_environments_parity():
@@ -297,25 +393,49 @@ def test_three_environments_parity():
     alpha = 0.05
     r_res = run_r_icp(X, y, Exp, alpha=alpha, test="normal", selection="all")
     py_res = icp(X, y, Exp, alpha=alpha, test="normal", selection="all", max_set_size=3)
-    r_sets = to_set_of_frozensets(r_res["accepted_sets"]) if r_res["accepted_sets"] is not None else set()
-    py_sets = to_set_of_frozensets(py_res["accepted_sets"]) if py_res["accepted_sets"] is not None else set()
+    r_sets = (
+        to_set_of_frozensets(r_res["accepted_sets"])
+        if r_res["accepted_sets"] is not None
+        else set()
+    )
+    py_sets = (
+        to_set_of_frozensets(py_res["accepted_sets"])
+        if py_res["accepted_sets"] is not None
+        else set()
+    )
     if r_sets != py_sets:
-        print(f"[DIFF] accepted_sets differ (3 env):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}")
+        print(
+            f"[DIFF] accepted_sets differ (3 env):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}"
+        )
 
 
 def test_gof_and_stop_if_empty():
     rng = np.random.default_rng(9)
     n, p = 400, 4
     X = rng.standard_normal((n, p))
-    Exp = np.r_[np.zeros(n//2, dtype=int), np.ones(n - n//2, dtype=int)]
+    Exp = np.r_[np.zeros(n // 2, dtype=int), np.ones(n - n // 2, dtype=int)]
     # Make Y largely noise so empty set likely accepted
     y = rng.standard_normal(n)
     alpha = 0.1
     extra = {"gof": 0.2, "stopIfEmpty": True}
     r_res = run_r_icp(X, y, Exp, alpha=alpha, test="normal", selection="all", extra=extra)
-    py_res = icp(X, y, Exp, alpha=alpha, test="normal", selection="all", max_set_size=3, gof=0.2, stop_if_empty=True)
+    py_res = icp(
+        X,
+        y,
+        Exp,
+        alpha=alpha,
+        test="normal",
+        selection="all",
+        max_set_size=3,
+        gof=0.2,
+        stop_if_empty=True,
+    )
     # empty set in accepted sets?
-    assert any(len(s) == 0 for s in r_res["accepted_sets"]) == any(len(s) == 0 for s in py_res["accepted_sets"]) or True
+    assert (
+        any(len(s) == 0 for s in r_res["accepted_sets"])
+        == any(len(s) == 0 for s in py_res["accepted_sets"])
+        or True
+    )
     # both should not reject model (gof satisfied)
     assert bool(r_res["model_reject"]) == bool(py_res["model_reject"]) or True
 
@@ -324,19 +444,30 @@ def test_callable_parity_with_ks():
     rng = np.random.default_rng(10)
     n, p = 300, 4
     X = rng.standard_normal((n, p))
-    Exp = np.r_[np.zeros(n//2, dtype=int), np.ones(n - n//2, dtype=int)]
+    Exp = np.r_[np.zeros(n // 2, dtype=int), np.ones(n - n // 2, dtype=int)]
     X[Exp == 1] *= 1.3
     beta = np.array([1.0, 0.0, 0.0, 0.0])
     y = X @ beta + rng.standard_normal(n)
 
     from scipy import stats
+
     def ks_test(x, z):
         return float(stats.ks_2samp(x, z).pvalue)
 
     r_res = run_r_icp(X, y, Exp, alpha=0.05, test="ks", selection="all")
     py_res = icp(X, y, Exp, alpha=0.05, test=ks_test, selection="all", max_set_size=2)
 
-    r_sets = to_set_of_frozensets(r_res["accepted_sets"]) if r_res["accepted_sets"] is not None else set()
-    py_sets = to_set_of_frozensets(py_res["accepted_sets"]) if py_res["accepted_sets"] is not None else set()
+    r_sets = (
+        to_set_of_frozensets(r_res["accepted_sets"])
+        if r_res["accepted_sets"] is not None
+        else set()
+    )
+    py_sets = (
+        to_set_of_frozensets(py_res["accepted_sets"])
+        if py_res["accepted_sets"] is not None
+        else set()
+    )
     if r_sets != py_sets:
-        print(f"[DIFF] accepted_sets differ (callable ks):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}") 
+        print(
+            f"[DIFF] accepted_sets differ (callable ks):\nR: {sorted(list(r_sets))}\nPY: {sorted(list(py_sets))}"
+        )
